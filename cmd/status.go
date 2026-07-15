@@ -1,38 +1,3 @@
-/*
-=============================================================================
-🎓 LEARNING NOTE — cmd/status.go (Full Implementation)
-=============================================================================
-
-WHAT THIS FILE DOES:
-  Queries the database and prints an aggregate summary:
-    Pending:    5
-    Processing: 2
-    Completed:  10
-    Failed:     1
-    Dead (DLQ): 3
-    ─────────────
-    Total:      21
-
-KEY GO CONCEPT — GROUP BY + COUNT:
-  SQL's "GROUP BY state" groups all rows by their state column,
-  then COUNT(*) counts how many rows are in each group.
-  Result might look like:
-    state     | count
-    ----------+------
-    pending   | 5
-    completed | 10
-    dead      | 3
-
-KEY GO CONCEPT — rows.Next() LOOP:
-  When a SQL query returns multiple rows, you iterate with:
-    for rows.Next() {
-        rows.Scan(&var1, &var2)  // extract columns into variables
-    }
-  Always call rows.Close() when done (or use defer).
-
-=============================================================================
-*/
-
 package cmd
 
 import (
@@ -60,7 +25,6 @@ Example:
 		}
 		defer rows.Close()
 
-		// Collect counts into a map: state → count
 		counts := map[string]int{
 			"pending":    0,
 			"processing": 0,
@@ -80,7 +44,6 @@ Example:
 			total += count
 		}
 
-		// Print formatted output
 		fmt.Println("Queue Status")
 		fmt.Println("  ──────────────────")
 		fmt.Printf("  Pending:    %d\n", counts["pending"])

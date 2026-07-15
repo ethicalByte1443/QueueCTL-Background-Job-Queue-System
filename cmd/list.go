@@ -1,26 +1,3 @@
-/*
-=============================================================================
-🎓 LEARNING NOTE — cmd/list.go (Full Implementation)
-=============================================================================
-
-WHAT THIS FILE DOES:
-  Lists individual jobs with their details. Can filter by state.
-    queuectl list                   → show all jobs
-    queuectl list --state pending   → show only pending jobs
-    queuectl list --state dead      → show only dead (DLQ) jobs
-
-KEY GO CONCEPT — CONDITIONAL SQL BUILDING:
-  We dynamically build the SQL query based on whether --state was provided.
-  If the user passes --state, we add a WHERE clause. If not, we select all.
-
-KEY GO CONCEPT — fmt.Sprintf for FORMATTING:
-  %-8s  → left-aligned string, padded to 8 characters
-  %-12s → left-aligned string, padded to 12 characters
-  This creates a nicely aligned table in the terminal output.
-
-=============================================================================
-*/
-
 package cmd
 
 import (
@@ -62,7 +39,6 @@ Examples:
 		}
 		defer rows.Close()
 
-		// Print header
 		fmt.Printf("\n%-14s %-25s %-12s %-10s %-30s\n",
 			"ID", "COMMAND", "STATE", "ATTEMPTS", "ERROR")
 		fmt.Println("──────────────────────────────────────────────────────────────────────────────────────────")
@@ -76,7 +52,6 @@ Examples:
 				continue
 			}
 
-			// Truncate long commands/errors for display
 			if len(command) > 23 {
 				command = command[:20] + "..."
 			}
