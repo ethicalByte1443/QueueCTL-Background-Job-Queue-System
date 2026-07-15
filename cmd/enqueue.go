@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ethicalByte1443/queuectl/db"
@@ -59,8 +60,10 @@ Examples:
 			}
 
 			jsonInput := args[0]
-			if err := json.Unmarshal([]byte(jsonInput), &payload); err != nil {
-				fmt.Fprintf(os.Stderr, "[ERROR] Invalid JSON: %v\n", err)
+			var err error
+			payload, err = parseFlexiblePayload(jsonInput)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[ERROR] Invalid payload: %v\n", err)
 				os.Exit(1)
 			}
 		}
@@ -130,4 +133,78 @@ func getMaxRetries() int {
 		return 3
 	}
 	return value
+}
+
+func parseFlexiblePayload(input string) (JobPayload, error) {
+	input = strings.Trim(input, "'")
+	input = strings.TrimSpace(input)
+
+	var payload JobPayload
+
+	// Try standard JSON parsing first
+	err := json.Unmarshal([]byte(input), &payload)
+	if err == nil {
+		return payload, nil
+	}
+
+	// Keys to search for
+	keys := []string{"id:", "command:", "priority:", "run_at:", "timeout:"}
+	
+	type keyPos struct {
+		key      string
+		valStart int
+	}
+	var positions []keyPos
+
+	for _, k := range keys {
+		idx := strings.Index(input, k)
+		if idx != -1 {
+			positions = append(positions, keyPos{key: k, valStart: idx + len(k)})
+		}
+	}
+
+	// Sort positions by valStart
+	for i := 0; i < len(positions); i++ {
+		for j := i + 1; j < len(positions); j++ {
+			if positions[i].valStart > positions[j].valStart {
+				positions[i], positions[j] = positions[j], positions[i]
+			}
+		}
+	}
+
+	if len(positions) == 0 {
+		return payload, fmt.Errorf("no valid keys found in payload: %s", input)
+	}
+
+	// Extract values
+	for i, pos := range positions {
+		endIdx := len(input)
+		if i+1 < len(positions) {
+			nextKeyStart := positions[i+1].valStart - len(positions[i+1].key)
+			endIdx = nextKeyStart
+		}
+
+		val := input[pos.valStart:endIdx]
+		
+		val = strings.TrimSpace(val)
+		val = strings.TrimSuffix(val, ",")
+		val = strings.TrimSuffix(val, "}")
+		val = strings.TrimSpace(val)
+		val = strings.Trim(val, `"'`)
+
+		switch pos.key {
+		case "id:":
+			payload.Id = val
+		case "command:":
+			payload.Command = val
+		case "priority:":
+			fmt.Sscanf(val, "%d", &payload.Priority)
+		case "run_at:":
+			payload.RunAt = val
+		case "timeout:":
+			fmt.Sscanf(val, "%d", &payload.Timeout)
+		}
+	}
+
+	return payload, nil
 }

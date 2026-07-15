@@ -131,16 +131,16 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 
 		if newAttempts >= job.MaxRetries {
 			_, err = db.DB.Exec(
-				"UPDATE jobs SET state = 'dead', attempts = ?, error_msg = ?, duration_ms = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
-				newAttempts, execErr.Error(), durationMs, job.ID,
+				"UPDATE jobs SET state = 'dead', attempts = ?, error_msg = ?, output = ?, duration_ms = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
+				newAttempts, execErr.Error(), output, durationMs, job.ID,
 			)
 			fmt.Printf("  [Worker %d] [DLQ] Job %s moved to DLQ after %d failed attempts\n",
 				workerID, job.ID, newAttempts)
 		} else {
 			nextDelay := int(math.Pow(float64(backoffBase), float64(newAttempts)))
 			_, err = db.DB.Exec(
-				"UPDATE jobs SET state = 'failed', attempts = ?, error_msg = ?, duration_ms = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
-				newAttempts, execErr.Error(), durationMs, job.ID,
+				"UPDATE jobs SET state = 'failed', attempts = ?, error_msg = ?, output = ?, duration_ms = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
+				newAttempts, execErr.Error(), output, durationMs, job.ID,
 			)
 			fmt.Printf("  [Worker %d] [FAILED] Job %s failed (attempt %d/%d). Retry in %d seconds\n",
 				workerID, job.ID, newAttempts, job.MaxRetries, nextDelay)
