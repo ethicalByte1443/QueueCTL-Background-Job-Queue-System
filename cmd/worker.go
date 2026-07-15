@@ -1,31 +1,16 @@
 /*
 =============================================================================
-🎓 LEARNING NOTE — cmd/worker.go (Worker Subcommand)
+🎓 LEARNING NOTE — cmd/worker.go (Worker Subcommand - Connected)
 =============================================================================
 
 WHAT THIS FILE DOES:
-  Defines the "worker" command group with two sub-subcommands:
-    queuectl worker start --count 3
-    queuectl worker stop
+  Now connects the CLI commands to the actual worker package:
+    queuectl worker start --count 3  → calls worker.StartWorkers(3)
+    queuectl worker stop             → placeholder (workers stop via Ctrl+C)
 
-KEY GO CONCEPT — NESTED COMMANDS (Parent → Child):
-
-  "worker" is a PARENT command that doesn't do anything by itself.
-  "start" and "stop" are CHILDREN of "worker".
-
-  This creates a natural command hierarchy:
-    queuectl worker start --count 3
-    queuectl worker stop
-
-KEY GO CONCEPT — FLAGS:
-
-  Flags are the --options in CLI commands (like --count 3).
-  We use cmd.Flags().IntVarP() to define a flag:
-    - &workerCount  → pointer to the variable that stores the value
-    - "count"       → the long flag name (--count)
-    - "c"           → the short flag name (-c)
-    - 1             → the default value
-    - "description" → help text
+  In this design, workers run IN THE FOREGROUND of the current terminal.
+  You stop them by pressing Ctrl+C. The "stop" command is a placeholder
+  for a future feature where workers could run as background daemons.
 
 =============================================================================
 */
@@ -35,21 +20,18 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/ethicalByte1443/queuectl/worker"
 	"github.com/spf13/cobra"
 )
 
-// workerCount stores the value from --count flag. Default is 1 worker.
 var workerCount int
 
-// workerCmd is the PARENT command: "queuectl worker"
-// It doesn't do anything by itself — it just groups "start" and "stop".
 var workerCmd = &cobra.Command{
 	Use:   "worker",
 	Short: "Manage background workers",
 	Long:  `Start or stop background worker processes that pick up and execute queued jobs.`,
 }
 
-// workerStartCmd is the "queuectl worker start" command.
 var workerStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start background workers",
@@ -62,29 +44,27 @@ Example:
   queuectl worker start           # Start 1 worker (default)
   queuectl worker start --count 3 # Start 3 workers in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Task 5 will implement the actual worker pool here
-		fmt.Printf("🚀 Starting %d worker(s)...\n", workerCount)
+		// This calls the real worker pool implementation.
+		// It blocks until Ctrl+C is pressed.
+		worker.StartWorkers(workerCount)
 	},
 }
 
-// workerStopCmd is the "queuectl worker stop" command.
 var workerStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Gracefully stop all running workers",
-	Long: `Send a stop signal to all running workers. Workers will finish
-their current job before shutting down (graceful shutdown).`,
+	Long: `Workers are stopped by pressing Ctrl+C in the terminal where
+they are running. This sends a graceful shutdown signal.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Task 5 will implement graceful shutdown here
-		fmt.Println("🛑 Stopping workers...")
+		fmt.Println("ℹ️  Workers run in the foreground and can be stopped with Ctrl+C.")
+		fmt.Println("   Start workers with: queuectl worker start --count 3")
 	},
 }
 
 func init() {
-	// Register "start" and "stop" as children of "worker"
 	workerCmd.AddCommand(workerStartCmd)
 	workerCmd.AddCommand(workerStopCmd)
 
-	// Add the --count / -c flag to the "start" subcommand only
 	workerStartCmd.Flags().IntVarP(&workerCount, "count", "c", 1,
 		"Number of worker goroutines to start")
 }
