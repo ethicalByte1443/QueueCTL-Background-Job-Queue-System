@@ -16,9 +16,9 @@ var listCmd = &cobra.Command{
 	Long: `List all jobs or filter by state.
 
 Examples:
-  qcli list                   # Show all jobs
-  qcli list --state pending   # Show only pending jobs
-  qcli list --state completed # Show only completed jobs`,
+  queuectl list                   # Show all jobs
+  queuectl list --state pending   # Show only pending jobs
+  queuectl list --state completed # Show only completed jobs`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var query string
 		var queryArgs []interface{}

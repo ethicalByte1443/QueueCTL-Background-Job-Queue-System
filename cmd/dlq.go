@@ -20,7 +20,7 @@ var dlqListCmd = &cobra.Command{
 	Long: `Display all jobs in the Dead Letter Queue with their error details.
 
 Example:
-  qcli dlq list`,
+  queuectl dlq list`,
 	Run: func(cmd *cobra.Command, args []string) {
 		query := `SELECT id, command, attempts, max_retries, error_msg, created_at, updated_at
 		          FROM jobs WHERE state = 'dead' ORDER BY updated_at DESC`
@@ -73,7 +73,7 @@ var dlqRetryCmd = &cobra.Command{
 The job's attempts counter will be reset to 0.
 
 Example:
-  qcli dlq retry job1`,
+  queuectl dlq retry job1`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		jobID := args[0]
