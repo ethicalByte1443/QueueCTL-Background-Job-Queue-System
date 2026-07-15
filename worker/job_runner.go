@@ -84,7 +84,7 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 	// other workers from modifying the database until we commit/rollback.
 	tx, err := db.DB.Begin()
 	if err != nil {
-		fmt.Printf("  [Worker %d] ⚠️  Failed to begin transaction: %v\n", workerID, err)
+		fmt.Printf("  [Worker %d] [WARNING] Failed to begin transaction: %v\n", workerID, err)
 		return false
 	}
 
@@ -113,7 +113,7 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 
 	rows, err := tx.Query(query)
 	if err != nil {
-		fmt.Printf("  [Worker %d] ⚠️  Failed to query jobs: %v\n", workerID, err)
+		fmt.Printf("  [Worker %d] [WARNING] Failed to query jobs: %v\n", workerID, err)
 		return false
 	}
 	defer rows.Close()
@@ -156,17 +156,17 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 		job.ID,
 	)
 	if err != nil {
-		fmt.Printf("  [Worker %d] ⚠️  Failed to claim job %s: %v\n", workerID, job.ID, err)
+		fmt.Printf("  [Worker %d] [WARNING] Failed to claim job %s: %v\n", workerID, job.ID, err)
 		return false
 	}
 
 	// --- Step 5: Commit the transaction (release the lock) ---
 	if err := tx.Commit(); err != nil {
-		fmt.Printf("  [Worker %d] ⚠️  Failed to commit claim for job %s: %v\n", workerID, job.ID, err)
+		fmt.Printf("  [Worker %d] [WARNING] Failed to commit claim for job %s: %v\n", workerID, job.ID, err)
 		return false
 	}
 
-	fmt.Printf("  [Worker %d] 📋 Claimed job: %s (command: %s, attempt: %d/%d)\n",
+	fmt.Printf("  [Worker %d] [INFO] Claimed job: %s (command: %s, attempt: %d/%d)\n",
 		workerID, job.ID, job.Command, job.Attempts+1, job.MaxRetries)
 
 	// --- Step 6: Execute the shell command ---
@@ -180,9 +180,9 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 			output, job.ID,
 		)
 		if err != nil {
-			fmt.Printf("  [Worker %d] ⚠️  Failed to update job %s as completed: %v\n", workerID, job.ID, err)
+			fmt.Printf("  [Worker %d] [WARNING] Failed to update job %s as completed: %v\n", workerID, job.ID, err)
 		}
-		fmt.Printf("  [Worker %d] ✅ Job %s completed successfully\n", workerID, job.ID)
+		fmt.Printf("  [Worker %d] [SUCCESS] Job %s completed successfully\n", workerID, job.ID)
 
 	} else {
 		// FAILURE — increment attempts and decide next state
@@ -194,7 +194,7 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 				"UPDATE jobs SET state = 'dead', attempts = ?, error_msg = ?, updated_at = datetime('now') WHERE id = ?",
 				newAttempts, execErr.Error(), job.ID,
 			)
-			fmt.Printf("  [Worker %d] 💀 Job %s moved to DLQ after %d failed attempts\n",
+			fmt.Printf("  [Worker %d] [DLQ] Job %s moved to DLQ after %d failed attempts\n",
 				workerID, job.ID, newAttempts)
 		} else {
 			// Still has retries left → mark as failed (will be retried after backoff)
@@ -203,12 +203,12 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 				"UPDATE jobs SET state = 'failed', attempts = ?, error_msg = ?, updated_at = datetime('now') WHERE id = ?",
 				newAttempts, execErr.Error(), job.ID,
 			)
-			fmt.Printf("  [Worker %d] ❌ Job %s failed (attempt %d/%d). Retry in %d seconds\n",
+			fmt.Printf("  [Worker %d] [FAILED] Job %s failed (attempt %d/%d). Retry in %d seconds\n",
 				workerID, job.ID, newAttempts, job.MaxRetries, nextDelay)
 		}
 
 		if err != nil {
-			fmt.Printf("  [Worker %d] ⚠️  Failed to update job %s state: %v\n", workerID, job.ID, err)
+			fmt.Printf("  [Worker %d] [WARNING] Failed to update job %s state: %v\n", workerID, job.ID, err)
 		}
 	}
 

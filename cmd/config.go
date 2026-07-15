@@ -41,9 +41,9 @@ var configCmd = &cobra.Command{
 	Long: `View or set configuration parameters for the job queue system.
 
 Examples:
-  queuectl config                       # Show current config
-  queuectl config --max-retries 5       # Set max retries to 5
-  queuectl config --backoff-base 3      # Set backoff base to 3 seconds`,
+  qcli config                       # Show current config
+  qcli config --max-retries 5       # Set max retries to 5
+  qcli config --backoff-base 3      # Set backoff base to 3 seconds`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check if any flags were explicitly set by the user.
 		// cmd.Flags().Changed() returns true only if the user typed the flag.
@@ -53,22 +53,22 @@ Examples:
 		// If user provided flags, save them
 		if maxRetriesChanged {
 			if err := setConfig("max_retries", maxRetries); err != nil {
-				fmt.Fprintf(os.Stderr, "❌ Failed to save max-retries: %v\n", err)
+				fmt.Fprintf(os.Stderr, "[ERROR] Failed to save max-retries: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("✅ max-retries set to %d\n", maxRetries)
+			fmt.Printf("[SUCCESS] max-retries set to %d\n", maxRetries)
 		}
 
 		if backoffBaseChanged {
 			if err := setConfig("backoff_base", backoffBase); err != nil {
-				fmt.Fprintf(os.Stderr, "❌ Failed to save backoff-base: %v\n", err)
+				fmt.Fprintf(os.Stderr, "[ERROR] Failed to save backoff-base: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("✅ backoff-base set to %d seconds\n", backoffBase)
+			fmt.Printf("[SUCCESS] backoff-base set to %d seconds\n", backoffBase)
 		}
 
 		// Always show current config
-		fmt.Println("\n⚙️  Current Configuration:")
+		fmt.Println("\nCurrent Configuration:")
 		fmt.Printf("  Max Retries:  %d\n", getConfigInt("max_retries", 3))
 		fmt.Printf("  Backoff Base: %d seconds\n", getConfigInt("backoff_base", 2))
 	},

@@ -1,8 +1,8 @@
-# QueueCTL — Background Job Queue System
+# QCli — Background Job Queue System
 
 ## Project Status: 🚧 In Progress
 
-QueueCTL is a CLI-based background job queue system that manages background tasks with worker processes, automatic retries using exponential backoff, and a Dead Letter Queue (DLQ) for permanently failed jobs.
+QCli is a CLI-based background job queue system that manages background tasks with worker processes, automatic retries using exponential backoff, and a Dead Letter Queue (DLQ) for permanently failed jobs.
 
 ---
 
@@ -17,25 +17,25 @@ QueueCTL is a CLI-based background job queue system that manages background task
 ## System Flow & Architecture
 
 ```
-                       [ queuectl enqueue ]
-                                │
-                                ▼
-                       ( SQLite Database )
-                                │
-          ┌─────────────────────┴─────────────────────┐
-          ▼ (Worker 1)                                ▼ (Worker 2)
-  [ Lock & Pick Job ]                         [ Lock & Pick Job ]
-          │                                           │
-          ▼                                           ▼
-   [ Execute Command ]                         [ Execute Command ]
-          │                                           │
-          ├──► Success ──► [ completed ]              ├──► Success ──► [ completed ]
-          │                                           │
-          └──► Failure ──► Retries exhausted?         └──► Failure ──► Retries exhausted?
-                               │                                           │
-                               ├──► Yes ──► [ dead ]                       ├──► Yes ──► [ dead ]
-                               │                                           │
-                               └──► No  ──► [ failed ] (Backoff wait)      └──► No  ──► [ failed ]
+                          [ qcli enqueue ]
+                                 │
+                                 ▼
+                        ( SQLite Database )
+                                 │
+           ┌─────────────────────┴─────────────────────┐
+           ▼ (Worker 1)                                ▼ (Worker 2)
+   [ Lock & Pick Job ]                         [ Lock & Pick Job ]
+           │                                           │
+           ▼                                           ▼
+    [ Execute Command ]                         [ Execute Command ]
+           │                                           │
+           ├──► Success ──► [ completed ]              ├──► Success ──► [ completed ]
+           │                                           │
+           └──► Failure ──► Retries exhausted?         └──► Failure ──► Retries exhausted?
+                                │                                           │
+                                ├──► Yes ──► [ dead ]                       ├──► Yes ──► [ dead ]
+                                │                                           │
+                                └──► No  ──► [ failed ] (Backoff wait)      └──► No  ──► [ failed ]
 ```
 
 ---
@@ -43,8 +43,8 @@ QueueCTL is a CLI-based background job queue system that manages background task
 ## Algorithms
 
 ### 1. Storing Jobs (Enqueue Stage)
-When a user enqueues a job via `queuectl enqueue`, the application:
-1. Validates the JSON payload containing the job `id` and shell `command`.
+When a user enqueues a job via `qcli enqueue`, the application:
+1. Validates input flags (`--id` and `--command`) or the fallback JSON payload containing the job `id` and shell `command`.
 2. Inserts the job into the SQLite database with:
    * `state` = `pending`
    * `attempts` = `0`

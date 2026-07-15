@@ -46,20 +46,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd is the base command. When the user types just "queuectl",
+// rootCmd is the base command. When the user types just "qcli",
 // Cobra runs the function in the "Run" field.
 var rootCmd = &cobra.Command{
-	Use:   "queuectl",
+	Use:   "qcli",
 	Short: "A CLI-based background job queue system",
-	Long: `QueueCTL is a background job queue system that manages tasks with
+	Long: `QCli is a background job queue system that manages tasks with
 worker processes, automatic retries using exponential backoff,
 and a Dead Letter Queue (DLQ) for permanently failed jobs.
 
 Usage examples:
-  queuectl enqueue '{"id":"job1", "command":"echo hello"}'
-  queuectl worker start --count 3
-  queuectl status
-  queuectl dlq list`,
+  qcli enqueue '{"id":"job1", "command":"echo hello"}'
+  qcli worker start --count 3
+  qcli status
+  qcli dlq list`,
 }
 
 // Execute is called from main.go. It starts Cobra's command parsing.

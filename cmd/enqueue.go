@@ -66,10 +66,10 @@ or use the user-friendly --id and --command flags directly.
 
 Examples:
   # Using flags (Recommended for Windows):
-  queuectl enqueue --id job1 --command "echo hello world"
+  qcli enqueue --id job1 --command "echo hello world"
 
   # Using raw JSON payload:
-  queuectl enqueue '{"id":"job1", "command":"echo hello world"}'`,
+  qcli enqueue '{"id":"job1", "command":"echo hello world"}'`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var payload JobPayload
@@ -77,7 +77,7 @@ Examples:
 		// Check if flags are provided
 		if flagJobID != "" || flagCommand != "" {
 			if flagJobID == "" || flagCommand == "" {
-				fmt.Fprintln(os.Stderr, "❌ Both --id and --command flags must be provided if using flags.")
+				fmt.Fprintln(os.Stderr, "[ERROR] Both --id and --command flags must be provided if using flags.")
 				os.Exit(1)
 			}
 			payload.Id = flagJobID
@@ -85,25 +85,25 @@ Examples:
 		} else {
 			// Fallback to JSON payload argument
 			if len(args) == 0 {
-				fmt.Fprintln(os.Stderr, "❌ Error: Must provide either a JSON payload argument or the --id and --command flags.")
+				fmt.Fprintln(os.Stderr, "[ERROR] Must provide either a JSON payload argument or the --id and --command flags.")
 				_ = cmd.Help()
 				os.Exit(1)
 			}
 
 			jsonInput := args[0]
 			if err := json.Unmarshal([]byte(jsonInput), &payload); err != nil {
-				fmt.Fprintf(os.Stderr, "❌ Invalid JSON: %v\n", err)
+				fmt.Fprintf(os.Stderr, "[ERROR] Invalid JSON: %v\n", err)
 				os.Exit(1)
 			}
 		}
 
 		// --- Step 2: Validate required fields ---
 		if payload.Id == "" {
-			fmt.Fprintln(os.Stderr, "❌ Missing required field: \"id\"")
+			fmt.Fprintln(os.Stderr, "[ERROR] Missing required field: \"id\"")
 			os.Exit(1)
 		}
 		if payload.Command == "" {
-			fmt.Fprintln(os.Stderr, "❌ Missing required field: \"command\"")
+			fmt.Fprintln(os.Stderr, "[ERROR] Missing required field: \"command\"")
 			os.Exit(1)
 		}
 
@@ -118,11 +118,11 @@ Examples:
 
 		_, err := db.DB.Exec(query, payload.Id, payload.Command, maxRetries)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to enqueue job: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] Failed to enqueue job: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("✅ Job enqueued successfully!\n")
+		fmt.Printf("Job enqueued successfully!\n")
 		fmt.Printf("   ID:      %s\n", payload.Id)
 		fmt.Printf("   Command: %s\n", payload.Command)
 		fmt.Printf("   State:   pending\n")

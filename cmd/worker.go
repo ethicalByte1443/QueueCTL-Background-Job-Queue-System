@@ -41,8 +41,8 @@ Workers continuously poll the queue for pending jobs, execute them,
 and handle retries with exponential backoff.
 
 Example:
-  queuectl worker start           # Start 1 worker (default)
-  queuectl worker start --count 3 # Start 3 workers in parallel`,
+  qcli worker start           # Start 1 worker (default)
+  qcli worker start --count 3 # Start 3 workers in parallel`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// This calls the real worker pool implementation.
 		// It blocks until Ctrl+C is pressed.
@@ -56,8 +56,8 @@ var workerStopCmd = &cobra.Command{
 	Long: `Workers are stopped by pressing Ctrl+C in the terminal where
 they are running. This sends a graceful shutdown signal.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ℹ️  Workers run in the foreground and can be stopped with Ctrl+C.")
-		fmt.Println("   Start workers with: queuectl worker start --count 3")
+		fmt.Println("[INFO] Workers run in the foreground and can be stopped with Ctrl+C.")
+		fmt.Println("       Start workers with: qcli worker start --count 3")
 	},
 }
 

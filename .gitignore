@@ -40,3 +40,5 @@ go.work.sum
 # Compiled binary
 queuectl
 queuectl.exe
+qcli
+qcli.exe

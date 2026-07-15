@@ -49,13 +49,13 @@ var statusCmd = &cobra.Command{
 	Long: `Display a summary of all jobs grouped by their current state.
 
 Example:
-  queuectl status`,
+  qcli status`,
 	Run: func(cmd *cobra.Command, args []string) {
 		query := `SELECT state, COUNT(*) as count FROM jobs GROUP BY state`
 
 		rows, err := db.DB.Query(query)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Failed to query status: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] Failed to query status: %v\n", err)
 			os.Exit(1)
 		}
 		defer rows.Close()
@@ -81,7 +81,7 @@ Example:
 		}
 
 		// Print formatted output
-		fmt.Println("📊 Queue Status")
+		fmt.Println("Queue Status")
 		fmt.Println("  ──────────────────")
 		fmt.Printf("  Pending:    %d\n", counts["pending"])
 		fmt.Printf("  Processing: %d\n", counts["processing"])

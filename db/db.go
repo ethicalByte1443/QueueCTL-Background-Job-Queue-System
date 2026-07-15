@@ -82,7 +82,7 @@ func InitDB() error {
 		return fmt.Errorf("could not find home directory: %w", err)
 	}
 
-	dbDir := filepath.Join(homeDir, ".queuectl")
+	dbDir := filepath.Join(homeDir, ".qcli")
 
 	// os.MkdirAll creates the directory (and any parents) if they don't exist.
 	// 0755 is a Unix permission code: owner can read/write/execute, others can
@@ -91,7 +91,7 @@ func InitDB() error {
 		return fmt.Errorf("could not create data directory: %w", err)
 	}
 
-	dbPath := filepath.Join(dbDir, "queuectl.db")
+	dbPath := filepath.Join(dbDir, "qcli.db")
 
 	// --- Step 2: Open the database connection ---
 	// sql.Open doesn't actually connect — it just prepares the connection.
@@ -119,7 +119,7 @@ func InitDB() error {
 		return fmt.Errorf("could not create schema: %w", err)
 	}
 
-	fmt.Printf("📦 Database ready at: %s\n", dbPath)
+	fmt.Printf("[DB] Initialized at: %s\n", dbPath)
 	return nil
 }
 

@@ -64,7 +64,7 @@ import (
 // StartWorkers launches 'count' workers and blocks until they all finish.
 // Workers run until a SIGINT (Ctrl+C) signal is received.
 func StartWorkers(count int) {
-	fmt.Printf("🚀 Starting %d worker(s)...\n", count)
+	fmt.Printf("[INFO] Starting %d worker(s)...\n", count)
 
 	// --- Step 1: Create a cancellation context ---
 	// Think of this as a "kill switch" shared by all workers.
@@ -85,7 +85,7 @@ func StartWorkers(count int) {
 		}(i)
 	}
 
-	fmt.Printf("✅ All %d worker(s) running. Press Ctrl+C to stop gracefully.\n", count)
+	fmt.Printf("[INFO] All %d worker(s) running. Press Ctrl+C to stop gracefully.\n", count)
 
 	// --- Step 4: Wait for Ctrl+C signal ---
 	sigChan := make(chan os.Signal, 1)
@@ -95,7 +95,7 @@ func StartWorkers(count int) {
 	// The program just sits here, while workers run in the background.
 	<-sigChan
 
-	fmt.Println("\n🛑 Shutdown signal received. Waiting for workers to finish current jobs...")
+	fmt.Println("\n[INFO] Shutdown signal received. Waiting for workers to finish current jobs...")
 
 	// --- Step 5: Tell all workers to stop ---
 	cancel() // This triggers ctx.Done() in all workers
@@ -103,7 +103,7 @@ func StartWorkers(count int) {
 	// --- Step 6: Wait for all workers to finish their current jobs ---
 	wg.Wait()
 
-	fmt.Println("✅ All workers stopped gracefully.")
+	fmt.Println("[INFO] All workers stopped gracefully.")
 }
 
 // runWorker is the main loop for a single worker.

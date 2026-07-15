@@ -43,7 +43,7 @@ func main() {
 	// Step 1: Initialize the database connection.
 	// If this fails (e.g., disk full, permissions), we print the error and exit.
 	if err := db.InitDB(); err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Failed to initialize database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] Failed to initialize database: %v\n", err)
 		os.Exit(1)
 	}
 
