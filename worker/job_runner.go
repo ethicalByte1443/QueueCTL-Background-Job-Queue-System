@@ -157,7 +157,7 @@ func claimAndRunJob(ctx context.Context, workerID int) bool {
 func executeCommand(ctx context.Context, command string) (string, error) {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
+		cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", command)
 	} else {
 		cmd = exec.CommandContext(ctx, "sh", "-c", command)
 	}
