@@ -51,29 +51,50 @@ type JobPayload struct {
 	Command string `json:"command"`
 }
 
+var (
+	flagJobID   string
+	flagCommand string
+)
+
 var enqueueCmd = &cobra.Command{
 	Use:   "enqueue [JSON payload]",
 	Short: "Add a new job to the queue",
 	Long: `Enqueue adds a new job to the processing queue.
 
-The payload must be a valid JSON string with "id" and "command" fields.
+You can either pass a valid JSON string with "id" and "command" fields,
+or use the user-friendly --id and --command flags directly.
 
-Example:
-  queuectl enqueue '{"id":"job1", "command":"echo hello world"}'
-  queuectl enqueue '{"id":"job2", "command":"sleep 5"}'`,
-	Args: cobra.ExactArgs(1),
+Examples:
+  # Using flags (Recommended for Windows):
+  queuectl enqueue --id job1 --command "echo hello world"
+
+  # Using raw JSON payload:
+  queuectl enqueue '{"id":"job1", "command":"echo hello world"}'`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// args[0] is the raw JSON string from the terminal
-		jsonInput := args[0]
-
-		// --- Step 1: Parse JSON into a Go struct ---
 		var payload JobPayload
 
-		// json.Unmarshal converts a JSON string (as bytes) into a struct.
-		// If the JSON is malformed, it returns an error.
-		if err := json.Unmarshal([]byte(jsonInput), &payload); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Invalid JSON: %v\n", err)
-			os.Exit(1)
+		// Check if flags are provided
+		if flagJobID != "" || flagCommand != "" {
+			if flagJobID == "" || flagCommand == "" {
+				fmt.Fprintln(os.Stderr, "❌ Both --id and --command flags must be provided if using flags.")
+				os.Exit(1)
+			}
+			payload.Id = flagJobID
+			payload.Command = flagCommand
+		} else {
+			// Fallback to JSON payload argument
+			if len(args) == 0 {
+				fmt.Fprintln(os.Stderr, "❌ Error: Must provide either a JSON payload argument or the --id and --command flags.")
+				_ = cmd.Help()
+				os.Exit(1)
+			}
+
+			jsonInput := args[0]
+			if err := json.Unmarshal([]byte(jsonInput), &payload); err != nil {
+				fmt.Fprintf(os.Stderr, "❌ Invalid JSON: %v\n", err)
+				os.Exit(1)
+			}
 		}
 
 		// --- Step 2: Validate required fields ---
@@ -90,8 +111,6 @@ Example:
 		maxRetries := getMaxRetries()
 
 		// --- Step 4: Insert into the database ---
-		// The "?" placeholders prevent SQL injection attacks.
-		// Go fills them in order: $1=id, $2=command, $3=max_retries
 		query := `
 			INSERT INTO jobs (id, command, state, attempts, max_retries)
 			VALUES (?, ?, 'pending', 0, ?)
@@ -99,7 +118,6 @@ Example:
 
 		_, err := db.DB.Exec(query, payload.Id, payload.Command, maxRetries)
 		if err != nil {
-			// If the id already exists, SQLite will throw a UNIQUE constraint error
 			fmt.Fprintf(os.Stderr, "❌ Failed to enqueue job: %v\n", err)
 			os.Exit(1)
 		}
@@ -110,6 +128,11 @@ Example:
 		fmt.Printf("   State:   pending\n")
 		fmt.Printf("   Retries: 0/%d\n", maxRetries)
 	},
+}
+
+func init() {
+	enqueueCmd.Flags().StringVar(&flagJobID, "id", "", "ID of the job to enqueue")
+	enqueueCmd.Flags().StringVar(&flagCommand, "command", "", "Shell command for the job to execute")
 }
 
 // getMaxRetries reads the max_retries config from the config table.
