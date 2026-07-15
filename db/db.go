@@ -144,6 +144,13 @@ func createSchema() error {
 	-- This index speeds up the worker's query to find pending/failed jobs.
 	-- Without it, SQLite would scan every row in the table every time.
 	CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
+
+	-- Config table stores key-value pairs for runtime settings.
+	-- Examples: max_retries=3, backoff_base=2
+	CREATE TABLE IF NOT EXISTS config (
+		key   TEXT PRIMARY KEY,
+		value INTEGER NOT NULL
+	);
 	`
 
 	// Exec runs SQL that doesn't return rows (CREATE, INSERT, UPDATE, DELETE).
