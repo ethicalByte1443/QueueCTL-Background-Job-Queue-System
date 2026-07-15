@@ -65,5 +65,33 @@ Inspect and retry permanently failed tasks:
 .\qcli.exe dlq retry job1
 ```
 
+## Architecture & Flow
+
+The system runs as a lightweight, concurrent task orchestrator:
+1. **Producer:** `qcli enqueue` inserts task payloads directly into the database.
+2. **Database:** SQLite stores task configurations, run statuses, execution metrics, and logs.
+3. **Consumers:** Parallel workers run inside Go goroutines. They coordinate job picking, subprocess execution, error capturing, and retries.
+
+### Job Life Cycle
+```
+[ pending ] ──(Worker Claim)──> [ processing ]
+     ▲                                 │
+     │ (Backoff delay elapsed)         ├──(Success)──> [ completed ]
+     └─────── [ failed ] ◄─────────────┤
+                                       └──(Retries exhausted)──> [ dead ] (DLQ)
+```
+
+## Challenges & Solutions
+
+### 1. SQLite Database Concurrency
+* **Problem:** Multiple parallel workers updating task states concurrently cause database lock conflicts (`SQLITE_BUSY` errors).
+* **Solution:** 
+  * Configured connection params (`busy_timeout=5000`) so workers wait for locks to clear instead of throwing errors.
+  * Wrapped lock-and-claim operations inside a transaction block using `BEGIN IMMEDIATE` to lock the DB during the pick phase.
+
+### 2. Missing SQLite Math Functions
+* **Problem:** Calculating exponential backoff delay intervals (`base^attempts`) directly inside the database query requires math capabilities not natively available in SQLite without extensions.
+* **Solution:** Simplified the database query to fetch candidate failed jobs, then evaluated backoff eligibility inside Go code using standard library `math.Pow`.
+
 ## License
 MIT License
