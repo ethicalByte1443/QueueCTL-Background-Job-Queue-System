@@ -1,73 +1,75 @@
-# QueueCTL - Background Job Queue System
+# QueueCTL
 
-QueueCTL is a production-grade, highly concurrent CLI-based background job queue system written in Go, powered by SQLite. It manages background tasks, handles automatic retries with exponential backoff, runs parallel worker processes, maintains a Dead Letter Queue (DLQ), and hosts a visual web dashboard.
+QueueCTL is a lightweight, concurrent CLI background job queue system written in Go and backed by SQLite. It manages asynchronous tasks, handles automated retries with exponential backoff, isolates failing tasks in a Dead Letter Queue (DLQ), and hosts a simple HTML dashboard to monitor worker state and job logs.
 
 ---
 
-## 1. Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
-- Install **Go (v1.18+)** from [go.dev](https://go.dev/).
+- **Go 1.18+** installed on your system.
 
-### Compilation
-Clone the repository, open your terminal in the workspace root, and run:
+### Build
+To compile the QueueCTL binary, run:
 ```bash
-# Compile the production-grade binary
 go build -o queuectl.exe .
 ```
 
-### Initializing the System
-When you run any `queuectl` command, it will automatically initialize a persistent SQLite database located at `~/.queuectl/queuectl.db` and create the required schema tables.
+### Database Initialization
+The application initializes automatically on the first command run. It creates a local SQLite database at `~/.queuectl/queuectl.db` (under your user home directory) and sets up the required tables for job queues, worker telemetry, and metrics.
 
 ---
 
-## 2. Usage Examples
+## Usage Examples
 
-QueueCTL supports the following commands:
+Below are the commands supported by the CLI, along with realistic example outputs.
 
-### `config` & `config set`
-View or modify maximum retries and backoff base intervals:
+### Configuration
+View the current runtime configurations (retries and backoff limits) or modify them.
+
+#### View Config
 ```bash
-# 1. View current configuration
 .\queuectl.exe config
 ```
-**Example Output:**
+**Output:**
 ```text
 Current Configuration:
   Max Retries:  3
   Backoff Base: 2 seconds
 ```
 
+#### Set Config via Flags
 ```bash
-# 2. Update config parameters using flags
 .\queuectl.exe config --max-retries 5 --backoff-base 3
 ```
-**Example Output:**
+**Output:**
 ```text
 [SUCCESS] max-retries set to 5
 [SUCCESS] backoff-base set to 3 seconds
 ```
 
+#### Set Config via Positional Subcommand
 ```bash
-# 3. Update config parameters using positional command set
 .\queuectl.exe config set max-retries 3
 ```
-**Example Output:**
+**Output:**
 ```text
 [SUCCESS] Config parameter 'max_retries' updated to 3
 ```
 
 ---
 
-### `enqueue`
-Add new tasks to the queue using command-line flags or raw JSON payloads. Supports priority, scheduling execution (`run-at`), and timeout execution limits:
+### Enqueueing Jobs
+Add new tasks to the queue using command-line flags or a raw JSON payload. The system supports job priority, scheduled execution delays (`run-at`), and timeout limits. 
+
+*Note: The CLI natively parses quote-stripped JSON arguments typed directly into PowerShell, so no manual backslash escaping is required.*
+
+#### Option A: Enqueue using CLI flags
 ```bash
-# 1. Enqueue job using flags
 .\queuectl.exe enqueue --id job1 --command "echo 'hello world'" --priority 10 --timeout 30
 ```
-**Example Output:**
+**Output:**
 ```text
-[DB] Initialized at: C:\Users\Aseem\.queuectl\queuectl.db
 Job enqueued successfully!
    ID:       job1
    Command:  echo 'hello world'
@@ -77,11 +79,11 @@ Job enqueued successfully!
    Retries:  0/3
 ```
 
+#### Option B: Enqueue using a JSON payload string
 ```bash
-# 2. Enqueue job using JSON string payload
 .\queuectl.exe enqueue '{"id":"job2","command":"sleep 2","priority":5,"run_at":"2026-07-16T12:00:00Z"}'
 ```
-**Example Output:**
+**Output:**
 ```text
 Job enqueued successfully!
    ID:       job2
@@ -95,28 +97,28 @@ Job enqueued successfully!
 
 ---
 
-### `worker`
-Manage background execution worker daemons:
+### Managing Workers
+Workers run in parallel goroutines. You can control daemon instances using start/stop operations.
+
+#### Start Worker Goroutines
 ```bash
-# 1. Start parallel worker goroutines in the foreground
-.\queuectl.exe worker start --count 3
+.\queuectl.exe worker start --count 2
 ```
-**Example Output:**
+**Output:**
 ```text
-[INFO] Starting 3 worker(s)...
-[INFO] All 3 worker(s) running. Press Ctrl+C or run 'queuectl worker stop' to stop gracefully.
+[INFO] Starting 2 worker(s)...
+[INFO] All 2 worker(s) running. Press Ctrl+C or run 'queuectl worker stop' to stop gracefully.
   [Worker 1] Started
   [Worker 2] Started
-  [Worker 3] Started
   [Worker 1] [INFO] Claimed job: job1 (command: echo 'hello world', attempt: 1/3)
   [Worker 1] [SUCCESS] Job job1 completed successfully
 ```
 
+#### Gracefully Stop Workers (Remote Signal)
 ```bash
-# 2. Stop running worker processes gracefully from another terminal
 .\queuectl.exe worker stop
 ```
-**Example Output:**
+**Output:**
 ```text
 [INFO] Sent graceful stop signal to 1 running worker process(es).
        Workers will finish their current jobs and stop gracefully.
@@ -124,13 +126,14 @@ Manage background execution worker daemons:
 
 ---
 
-### `status`, `list`, `stats`, & `logs`
-Monitor and analyze jobs in the queue:
+### Queue Inspection & Logs
+
+#### Show Current Status
+Lists aggregate counts and registered worker process IDs (PIDs):
 ```bash
-# 1. Show overall queue counts and active worker processes
 .\queuectl.exe status
 ```
-**Example Output:**
+**Output:**
 ```text
 Queue Status
   ────────────────────────────────────────
@@ -145,19 +148,19 @@ Queue Status
 Active Workers
   ────────────────────────────────────────
   Worker Processes:  1
-  Total Goroutines:  3
+  Total Goroutines:  2
 
   Running Processes:
     PID      GOROUTINES   STARTED AT               
     ────────────────────────────────────────────
-    7828     3            2026-07-15T20:55:24Z     
+    7828     2            2026-07-15T20:55:24Z     
 ```
 
+#### List Enqueued Jobs
 ```bash
-# 2. List jobs in the queue, optionally filtering by state
 .\queuectl.exe list --state pending
 ```
-**Example Output:**
+**Output:**
 ```text
 ID             COMMAND                   STATE        ATTEMPTS   ERROR
 ──────────────────────────────────────────────────────────────────────────────────────────
@@ -166,11 +169,11 @@ job2           sleep 2                   pending      0/3        -
 Total: 1 job(s)
 ```
 
+#### View Telemetry Stats
 ```bash
-# 3. View telemetry and execution statistics
 .\queuectl.exe stats
 ```
-**Example Output:**
+**Output:**
 ```text
 Queue CTL - System Performance Metrics
 ==============================================================
@@ -190,15 +193,15 @@ Efficiency & Reliability:
 --------------------------------------------------------------
 Active Infrastructure:
   Worker Processes:      1
-  Worker Goroutines:     3
+  Worker Goroutines:     2
 ==============================================================
 ```
 
+#### View Output and Error Logs for a Job
 ```bash
-# 4. View stdout/stderr and error logs for a specific job
 .\queuectl.exe logs job-fail
 ```
-**Example Output:**
+**Output:**
 ```text
 ==============================================================
 Job Details: job-fail
@@ -220,13 +223,13 @@ Execution Output:
 
 ---
 
-### `dlq`
-Inspect and retry jobs that have permanently failed:
+### Dead Letter Queue (DLQ) Management
+
+#### List DLQ Jobs
 ```bash
-# 1. List dead jobs in Dead Letter Queue (DLQ)
 .\queuectl.exe dlq list
 ```
-**Example Output:**
+**Output:**
 ```text
 Dead Letter Queue
 ID             COMMAND                   ATTEMPTS   ERROR                                   
@@ -236,34 +239,33 @@ job-fail       non_existent_command      3/3        exit status 1
 Total: 1 dead job(s)
 ```
 
+#### Re-queue a Failed Job
 ```bash
-# 2. Re-queue dead job back to pending status
 .\queuectl.exe dlq retry job-fail
 ```
-**Example Output:**
+**Output:**
 ```text
 [INFO] Job 'job-fail' moved back to pending. It will be picked up by workers.
 ```
 
 ---
 
-### `dashboard`
-Start the visual web-based monitoring server:
+### Monitoring Dashboard
+Start the local HTML dashboard server (defaults to port 8080):
 ```bash
-# Start the web server (defaults to port 8080)
 .\queuectl.exe dashboard --port 8080
 ```
-**Example Output:**
+**Output:**
 ```text
 [INFO] QueueCTL Dashboard starting on http://127.0.0.1:8080
 ```
 
 ---
 
-## 3. Architecture Overview
+## Architecture Overview
 
 ### Job Life Cycle
-QueueCTL coordinates jobs through 5 distinct states:
+Jobs traverse through five core states:
 ```
                   [ enqueue ]
                        │
@@ -276,66 +278,59 @@ QueueCTL coordinates jobs through 5 distinct states:
 ```
 
 ### Data Persistence
-SQLite is utilized as the persistent central coordinator. It stores configuration settings, records active daemon registrations, and hosts the complete list of jobs.
-- The SQLite database uses **Write-Ahead Logging (WAL)** mode and a `busy_timeout` config of 5000ms. This prevents read/write blockage and enables SQLite to handle massive concurrent operations.
+SQLite coordinates job status and configurations. Write-Ahead Logging (WAL) is enabled by default, and `busy_timeout` is set to 5000ms. This prevents locking during concurrent reads/writes and allows multiple worker processes to access the database safely.
 
-### Worker Logic
-1. **Polling Loop**: Goroutines continuously poll the database looking for ready jobs (state is `pending`, or state is `failed` and backoff delay has elapsed).
-2. **Atomic Locking & Claiming**: To prevent duplicate processing under heavy concurrent thread loads, workers use a serialized update check. They execute:
+### Worker Execution Flow
+1. **Polling**: Workers periodically scan the database for ready jobs (`pending` or retry-ready `failed` jobs whose backoff delay has expired).
+2. **Optimistic Claim Locking**: To prevent multiple workers from claiming the same job, workers perform an atomic claim:
    ```sql
    UPDATE jobs SET state = 'processing' WHERE id = ? AND state = ?
    ```
-   Only the thread that successfully updates the row (returns `RowsAffected() == 1`) executes the command.
-3. **Execution & Metrics**: The command runs in a separate child shell process. The execution time is tracked, and output/exit status is saved to the database.
-4. **Exponential Backoff**: Delay calculation is done using the formula:
+   Only the thread that successfully updates the row (checking if `RowsAffected() > 0`) processes the job.
+3. **Execution**: The job's command is executed as a child process. On Windows, it executes via `powershell.exe` to natively support commands like `sleep 2` and `echo`. On Unix, it falls back to `sh`.
+4. **Exponential Backoff**: If a command fails, the next execution run time is calculated using:
    $$\text{delay} = \text{backoff\_base}^{\text{attempts}}\text{ seconds}$$
-   If a job reaches `max_retries`, it transitions into `dead` state (DLQ).
+   If `attempts >= max_retries`, the job is marked as `dead` (DLQ).
 
 ---
 
-## 4. Assumptions & Trade-offs
+## Assumptions & Trade-offs
 
-### 1. Database Polling vs. Event Hooks
-- **Decision**: SQLite does not support standard event triggers/pub-sub notifications to notify external processes when a job is enqueued. Therefore, worker threads poll the database on a interval ticker (defaulting to 2-second sleep if no jobs are found).
-- **Trade-off**: This increases database read frequency slightly but remains extremely lightweight because SQLite is embedded directly in-process.
+### Polling vs. Events
+Because SQLite is an embedded, file-based database, it lacks a native pub-sub or event channel mechanism. Workers must poll the database on an interval (defaulting to 2 seconds when idle). The polling interval is small enough to keep latencies low, and the WAL mode ensures database reads do not block enqueuers.
 
-### 2. Database-Backed Signals for Graceful Stop
-- **Decision**: Unix signal handlers (like `SIGUSR1`) behave inconsistently on Windows. We implemented worker process stop signaling by updating a status flag inside the `worker_processes` table in SQLite.
-- **Trade-off**: This guarantees stop commands work reliably across platforms (including Windows, macOS, and Linux) without custom native OS bindings.
+### Cross-Platform Stop Signals
+Unix signals (like `SIGUSR1` or custom heartbeat intercepts) behave inconsistently on Windows. We chose a database-backed heartbeat table (`worker_processes`). Stop requests write a `stop_requested` flag to this table, which workers check during heartbeats. This guarantees clean graceful shutdowns across Windows, macOS, and Linux without native OS platform-specific overrides.
 
 ---
 
-## 5. Testing Instructions
+## Testing Instructions
 
-### Automated Unit Tests
-We have built unit and integration tests to verify claims, retries, and priority scheduling. Run:
+### Automated Tests
+The repository includes unit and integration tests verifying claims, exponential retries, and priority scheduling. Run them with:
 ```bash
 go test -v ./worker
 ```
 
-### Manual Integration Scenario
-To verify that core features behave correctly under real execution conditions:
+### Manual Verification Flow
+To test the queue behavior manually:
 
-1. **Verify Successful Execution**:
+1. **Verify Success**:
    ```bash
-   .\queuectl.exe enqueue --id job-ok --command "echo 'success'"
+   .\queuectl.exe enqueue --id test-ok --command "echo 'hello'"
    .\queuectl.exe worker start --count 1
    ```
-   *Observe the worker runs `echo 'success'`, updates the state to `completed`, and prints SUCCESS.*
+   The worker should execute the echo command and mark it `completed`.
 
-2. **Verify Failures & Backoff Retries**:
+2. **Verify Retries & DLQ**:
    ```bash
-   .\queuectl.exe enqueue --id job-fail --command "invalid_command_xyz"
+   .\queuectl.exe enqueue --id test-fail --command "invalid_command_name"
    ```
-   *Observe the worker logs the failure, increments the attempts counter, schedules retry backoffs, and finally moves the job to the DLQ after 3 failures.*
+   Start the worker. The task will fail, schedule backoff retries, and eventually move to `dead` state (DLQ).
 
-3. **Verify Concurrency & Overlap Prevention**:
-   Start two separate worker processes from two terminals:
-   ```bash
-   # Terminal A
-   .\queuectl.exe worker start --count 2
+3. **Verify Concurrency Protection**:
+   Open two separate command prompts:
+   - Term A: `.\queuectl.exe worker start --count 2`
+   - Term B: `.\queuectl.exe worker start --count 2`
    
-   # Terminal B
-   .\queuectl.exe worker start --count 2
-   ```
-   Enqueue multiple sleep jobs and verify they are processed in parallel without overlapping/duplicate execution.
+   Enqueue multiple sleep commands and verify they run concurrently across the separate worker processes without double-execution.
