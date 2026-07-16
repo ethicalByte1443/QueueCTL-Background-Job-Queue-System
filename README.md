@@ -1,16 +1,16 @@
 # QueueCTL
 
-QueueCTL is a lightweight, concurrent CLI background job queue system written in Go and backed by SQLite. It manages asynchronous tasks, handles automated retries with exponential backoff, isolates failing tasks in a Dead Letter Queue (DLQ), and hosts a simple HTML dashboard to monitor worker state and job logs.
+QueueCTL is a lightweight, concurrent CLI background job queue system written in Go and backed by SQLite. 
 
 ---
 
 ## Setup Instructions
 
 ### Prerequisites
-- **Go 1.18+** installed on your system.
+- **Go 1.18+** 
 
 ### Build
-To compile the QueueCTL binary, run:
+To compile the QueueCTL, run:
 ```bash
 go build -o queuectl.exe .
 ```
