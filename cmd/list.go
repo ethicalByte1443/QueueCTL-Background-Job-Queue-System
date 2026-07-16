@@ -1,0 +1,86 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/ethicalByte1443/queuectl/db"
+	"github.com/spf13/cobra"
+)
+
+var listState string
+
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List jobs in the queue",
+	Long: `List all jobs or filter by state.
+
+Examples:
+  queuectl list                   # Show all jobs
+  queuectl list --state pending   # Show only pending jobs
+  queuectl list --state completed # Show only completed jobs`,
+	Run: func(cmd *cobra.Command, args []string) {
+		var query string
+		var queryArgs []interface{}
+
+		if listState != "" {
+			query = `SELECT id, command, state, attempts, max_retries, error_msg, created_at, updated_at
+			         FROM jobs WHERE state = ? ORDER BY created_at DESC`
+			queryArgs = append(queryArgs, listState)
+		} else {
+			query = `SELECT id, command, state, attempts, max_retries, error_msg, created_at, updated_at
+			         FROM jobs ORDER BY created_at DESC`
+		}
+
+		rows, err := db.DB.Query(query, queryArgs...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] Failed to query jobs: %v\n", err)
+			os.Exit(1)
+		}
+		defer rows.Close()
+
+		fmt.Printf("\n%-14s %-25s %-12s %-10s %-30s\n",
+			"ID", "COMMAND", "STATE", "ATTEMPTS", "ERROR")
+		fmt.Println("──────────────────────────────────────────────────────────────────────────────────────────")
+
+		count := 0
+		for rows.Next() {
+			var id, command, state, errorMsg, createdAt, updatedAt string
+			var attempts, maxRetries int
+
+			if err := rows.Scan(&id, &command, &state, &attempts, &maxRetries, &errorMsg, &createdAt, &updatedAt); err != nil {
+				continue
+			}
+
+			if len(command) > 23 {
+				command = command[:20] + "..."
+			}
+			if len(errorMsg) > 28 {
+				errorMsg = errorMsg[:25] + "..."
+			}
+			if errorMsg == "" {
+				errorMsg = "-"
+			}
+
+			attemptsStr := fmt.Sprintf("%d/%d", attempts, maxRetries)
+
+			fmt.Printf("%-14s %-25s %-12s %-10s %-30s\n",
+				id, command, state, attemptsStr, errorMsg)
+			count++
+		}
+
+		if count == 0 {
+			if listState != "" {
+				fmt.Printf("\n  No jobs with state '%s'\n", listState)
+			} else {
+				fmt.Println("\n  No jobs in the queue")
+			}
+		}
+		fmt.Printf("\nTotal: %d job(s)\n", count)
+	},
+}
+
+func init() {
+	listCmd.Flags().StringVarP(&listState, "state", "s", "",
+		"Filter jobs by state (pending, processing, completed, failed, dead)")
+}
